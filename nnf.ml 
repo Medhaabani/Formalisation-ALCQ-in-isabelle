@@ -1,0 +1,37 @@
+module Syntax = 
+struct
+
+type 'a role = AtomR of 'a;;
+
+type ('a, 'b) concept = SomeC of 'a role * ('a, 'b) concept |
+  AllC of 'a role * ('a, 'b) concept |
+  OrC of ('a, 'b) concept * ('a, 'b) concept |
+  AndC of ('a, 'b) concept * ('a, 'b) concept | NotC of ('a, 'b) concept |
+  Bottom | Top | AtomC of 'b;;
+
+end;; (*struct Syntax*)
+
+module Semantic = 
+struct
+
+let rec trans_neg
+  = function Syntax.SomeC (r, c) -> Syntax.AllC (r, trans_neg c)
+    | Syntax.AllC (r, c) -> Syntax.SomeC (r, trans_neg c)
+    | Syntax.OrC (c, d) -> Syntax.AndC (trans_neg c, trans_neg d)
+    | Syntax.AndC (c, d) -> Syntax.OrC (trans_neg c, trans_neg d)
+    | Syntax.NotC c -> c
+    | Syntax.Bottom -> Syntax.Top
+    | Syntax.Top -> Syntax.Bottom
+    | Syntax.AtomC x -> Syntax.NotC (Syntax.AtomC x);;
+
+let rec nnf
+  = function Syntax.SomeC (r, c) -> Syntax.SomeC (r, nnf c)
+    | Syntax.AllC (r, c) -> Syntax.AllC (r, nnf c)
+    | Syntax.OrC (c1, c2) -> Syntax.OrC (nnf c1, nnf c2)
+    | Syntax.AndC (c1, c2) -> Syntax.AndC (nnf c1, nnf c2)
+    | Syntax.Bottom -> Syntax.Bottom
+    | Syntax.Top -> Syntax.Top
+    | Syntax.AtomC x -> Syntax.AtomC x
+    | Syntax.NotC c1 -> trans_neg (nnf c1);;
+
+end;; (*struct Semantic*)
